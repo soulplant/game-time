@@ -1,20 +1,8 @@
 import * as fb from "firebase";
 import React, { useEffect, useReducer } from "react";
 import "./App.css";
+import { app, authProvider } from "./backend";
 import { EventList } from "./EventList";
-
-const app = fb.initializeApp({
-  apiKey: "AIzaSyCJTjQGSA3TZZzUBHGwSOLT0kEeIQED_yQ",
-  authDomain: "ac-dev-project.firebaseapp.com",
-  databaseURL: "https://ac-dev-project.firebaseio.com",
-  projectId: "ac-dev-project",
-  storageBucket: "ac-dev-project.appspot.com",
-  messagingSenderId: "76831991180",
-  appId: "1:76831991180:web:5884b62d238a516f9ea2a9",
-  measurementId: "G-XZ5LHNKDET",
-});
-
-const authProvider = new fb.auth.GoogleAuthProvider();
 
 if (window.location.hostname === "localhost") {
   fb.firestore().settings({
@@ -107,7 +95,7 @@ function App() {
           </p>
           <button onClick={logoutClicked}>Logout</button>
         </div>
-        <EventList app={app} />
+        <EventList />
       </div>
     );
   }
