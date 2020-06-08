@@ -1,7 +1,69 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useReducer } from "react";
 import { backend } from "./backend";
 import { EventForm } from "./EventForm";
 import * as m from "./model";
+import { Popup } from "./Popup";
+
+type State =
+  | {
+      type: "loading";
+    }
+  | {
+      type: "loaded";
+      events: m.Event[];
+      showingEventId: string | null;
+    };
+
+type Action =
+  | {
+      type: "events-loaded";
+      events: m.Event[];
+    }
+  | {
+      type: "show-event";
+      eventId: string;
+    }
+  | {
+      type: "close-popup";
+    };
+
+const initialState: State = {
+  type: "loading",
+};
+
+function getShowingEvent(state: State): string | null {
+  return state.type === "loaded" ? state.showingEventId : null;
+}
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "events-loaded": {
+      return {
+        type: "loaded",
+        events: action.events,
+        showingEventId: getShowingEvent(state),
+      };
+    }
+    case "show-event": {
+      if (state.type === "loading") {
+        return state;
+      }
+      return { ...state, showingEventId: action.eventId };
+    }
+    case "close-popup": {
+      if (state.type === "loading") {
+        return state;
+      }
+      return { ...state, showingEventId: null };
+    }
+    default: {
+      isNever(action);
+      return state;
+    }
+  }
+};
+
+function isNever(_: never) {}
 
 export const EventList: React.FC = (props) => {
   const create = async (event: m.Event) => {
@@ -13,31 +75,71 @@ export const EventList: React.FC = (props) => {
       return "" + e;
     }
   };
+  const save = async (event: m.Event) => {
+    try {
+      await backend.saveEvent(event);
+      await loadEvents();
+      return null;
+    } catch (e) {
+      return "" + e;
+    }
+  };
+  const [state, dispatch] = useReducer(reducer, initialState);
+
   const handleDelete = async (eventId: string) => {
     await backend.deleteEvent(eventId);
     await loadEvents();
   };
-  const [events, setEvents] = useState<m.Event[]>([]);
   const loadEvents = useCallback(async () => {
     const events = await backend.getEvents();
-    setEvents(events);
+    dispatch({ type: "events-loaded", events });
   }, []);
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
-  return (
-    <div>
-      <h1>Events</h1>
-      <ul>
-        {events.map((e) => (
-          <li key={e.id}>
-            {e.id} / {e.title} /{" "}
-            <button onClick={() => handleDelete(e.id!)}>Delete</button>
-          </li>
-        ))}
-      </ul>
-      <h1>Create</h1>
-      <EventForm onCreate={create}></EventForm>
-    </div>
-  );
+  switch (state.type) {
+    case "loading": {
+      return <div></div>;
+    }
+    case "loaded": {
+      return (
+        <div>
+          <h1>Events</h1>
+          <ul>
+            {state.events.map((e) => (
+              <li key={e.id}>
+                {e.id} / {e.title} /{" "}
+                <button
+                  onClick={() =>
+                    dispatch({ type: "show-event", eventId: e.id! })
+                  }
+                >
+                  Show
+                </button>
+                <button onClick={() => handleDelete(e.id!)}>Delete</button>
+              </li>
+            ))}
+          </ul>
+          <h1>Create</h1>
+          <EventForm create={true} onSave={create}></EventForm>
+          {state.showingEventId && (
+            <Popup>
+              <EventForm
+                create={false}
+                proto={state.events.find((e) => e.id === state.showingEventId)}
+                onSave={save}
+              ></EventForm>
+              <button onClick={() => dispatch({ type: "close-popup" })}>
+                Close
+              </button>
+            </Popup>
+          )}
+        </div>
+      );
+    }
+    default: {
+      isNever(state);
+    }
+  }
+  return <div></div>;
 };

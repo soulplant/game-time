@@ -26,6 +26,10 @@ export class Backend {
     await this.events().add(event);
   }
 
+  async saveEvent(event: m.Event): Promise<void> {
+    await this.events().doc(event.id).update({ title: event.title });
+  }
+
   async getEvents(): Promise<m.Event[]> {
     const eventCol = this.fs
       .collection("groups")
