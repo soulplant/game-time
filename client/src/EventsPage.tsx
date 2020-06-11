@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useReducer } from "react";
-import { backend } from "./backend";
+import { useBackend } from "./backend";
 import { EventForm } from "./EventForm";
 import * as m from "./model";
 import { Popup } from "./Popup";
@@ -65,7 +65,8 @@ const reducer = (state: State, action: Action): State => {
 
 function isNever(_: never) {}
 
-export const EventList: React.FC = (props) => {
+export const EventsPage: React.FC = (props) => {
+  const backend = useBackend();
   const create = async (event: m.Event) => {
     try {
       await backend.addEvent(event);
@@ -93,10 +94,11 @@ export const EventList: React.FC = (props) => {
   const loadEvents = useCallback(async () => {
     const events = await backend.getEvents();
     dispatch({ type: "events-loaded", events });
-  }, []);
+  }, [backend]);
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
   switch (state.type) {
     case "loading": {
       return <div></div>;

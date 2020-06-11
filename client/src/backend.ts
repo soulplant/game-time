@@ -1,5 +1,6 @@
 import * as fb from "firebase";
 import { firestore } from "firebase";
+import React, { useContext } from "react";
 import * as m from "./model";
 
 export const app = fb.initializeApp({
@@ -14,6 +15,16 @@ export const app = fb.initializeApp({
 });
 
 export const authProvider = new fb.auth.GoogleAuthProvider();
+
+export const BackendContext = React.createContext<Backend | null>(null);
+
+export const useBackend = () => {
+  const backend = useContext(BackendContext);
+  if (!backend) {
+    throw Error("no backend");
+  }
+  return backend;
+};
 
 export class Backend {
   constructor(private fs: firestore.Firestore) {}
@@ -46,5 +57,3 @@ export class Backend {
     await this.events().doc(eventId).delete();
   }
 }
-
-export const backend = new Backend(firestore());

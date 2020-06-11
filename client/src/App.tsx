@@ -1,8 +1,8 @@
 import * as fb from "firebase";
-import React, { useEffect, useReducer } from "react";
+import React, { useEffect, useMemo, useReducer } from "react";
 import "./App.css";
-import { app, authProvider } from "./backend";
-import { EventList } from "./EventList";
+import { app, authProvider, Backend, BackendContext } from "./backend";
+import { EventsPage } from "./EventsPage";
 
 if (window.location.hostname === "localhost") {
   fb.firestore().settings({
@@ -64,6 +64,9 @@ function App() {
   useEffect(() => {
     return app.auth().onAuthStateChanged(handleAuthStateChange);
   }, []);
+  const backend = useMemo(() => {
+    return new Backend(fb.firestore());
+  }, []);
   const loginClicked = async () => {
     const resp = await fb.auth().signInWithPopup(authProvider);
     handleAuthStateChange(resp.user);
@@ -80,23 +83,25 @@ function App() {
   }
   if (state.type === "logged-in") {
     return (
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "1em",
-            margin: "1em",
-          }}
-        >
-          <p>
-            Logged in as <em>{state.user.email}</em>
-          </p>
-          <button onClick={logoutClicked}>Logout</button>
+      <BackendContext.Provider value={backend}>
+        <div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "1em",
+              margin: "1em",
+            }}
+          >
+            <p>
+              Logged in as <em>{state.user.email}</em>
+            </p>
+            <button onClick={logoutClicked}>Logout</button>
+          </div>
+          <EventsPage />
         </div>
-        <EventList />
-      </div>
+      </BackendContext.Provider>
     );
   }
   isNever(state);
