@@ -32,8 +32,6 @@ type Action =
       type: "logged-out";
     };
 
-function isNever(_: never) {}
-
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "logged-in": {
@@ -49,10 +47,17 @@ const reducer = (state: State, action: Action): State => {
   return state;
 };
 
+const getLoggedInUser = (state: State) => {
+  return state.type === "logged-in" ? state.user : null;
+};
+
+function isNever(_: never) {}
+
 function App() {
   const [state, dispatch] = useReducer(reducer, {
     type: "unknown-login-state",
   });
+  const user = getLoggedInUser(state);
 
   const handleAuthStateChange = (user: fb.User | null) => {
     if (user) {
@@ -64,9 +69,14 @@ function App() {
   useEffect(() => {
     return app.auth().onAuthStateChanged(handleAuthStateChange);
   }, []);
+
   const backend = useMemo(() => {
-    return new Backend(fb.firestore());
-  }, []);
+    if (!user) {
+      return null;
+    }
+    return new Backend(fb.firestore(), user);
+  }, [user]);
+
   const loginClicked = async () => {
     const resp = await fb.auth().signInWithPopup(authProvider);
     handleAuthStateChange(resp.user);

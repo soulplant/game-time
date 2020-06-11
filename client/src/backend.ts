@@ -27,7 +27,7 @@ export const useBackend = () => {
 };
 
 export class Backend {
-  constructor(private fs: firestore.Firestore) {}
+  constructor(private fs: firestore.Firestore, private user: fb.User) {}
 
   private events() {
     return this.fs.collection("groups").doc("ac-gaming").collection("events");
@@ -39,6 +39,23 @@ export class Backend {
 
   async saveEvent(event: m.Event): Promise<void> {
     await this.events().doc(event.id).update({ title: event.title });
+  }
+
+  async registerAttendance(eventId: string): Promise<void> {
+    this.events()
+      .doc(eventId)
+      .collection("attendees")
+      .add({ userId: this.user.uid }); // maybe?
+    // TODO
+  }
+
+  async unregisterAttendance(eventId: string): Promise<void> {
+    this.events()
+      .doc(eventId)
+      .collection("attendees")
+      .where("userId", "==", this.user.uid)
+      .get();
+    // TODO
   }
 
   async getEvents(): Promise<m.Event[]> {
