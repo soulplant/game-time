@@ -1,0 +1,122 @@
+import { MutableRefObject, Reducer, useEffect, useRef, useState } from "react";
+import { Action, createStore } from "redux";
+
+type WithEffects<S, A, Api = {}> = {
+  _effects: Effect<A, Api>[];
+  state: S;
+};
+
+export type Effectful<S, A, Api = {}> = S | WithEffects<S, A, Api>;
+
+export type EffectfulReducer<S, A, Api> = (s: S, a: A) => Effectful<S, A, Api>;
+
+export function withEffect<S, A, Api = {}>(
+  s: S,
+  e: Effect<A, Api>
+): Effectful<S, A, Api> {
+  return {
+    _effects: [e],
+    state: s,
+  };
+}
+
+export function withEffects<S, A, Api = {}>(
+  s: S,
+  es: Effect<A, Api>[]
+): Effectful<S, A, Api> {
+  return {
+    _effects: es,
+    state: s,
+  };
+}
+
+export function getEffects<S, A, Api>(
+  s: Effectful<S, A, Api>
+): [S, Effect<A, Api>[]] {
+  const effects = s ? s["_effects"] : null;
+  if (effects) {
+    return [s["state"], effects];
+  }
+  return [s as S, []];
+}
+
+export const effectsEnhancer = <Api>(api: MutableRefObject<Api>) => (
+  createStore: any
+) => (reducer: any, initialState: any) => {
+  const effectQueue: any[] = [];
+  const wrappedReducer = (state: any, action: any) => {
+    const nextState = reducer(state, action);
+    const [ns, es] = getEffects(nextState);
+    Array.prototype.push.apply(effectQueue, es);
+    return ns;
+  };
+  const store = createStore(wrappedReducer, initialState);
+  store.subscribe(() => {
+    while (effectQueue.length) {
+      const effect: Effect<Action, Api> = effectQueue.pop();
+      effect(store.dispatch, api.current);
+    }
+  });
+  return store;
+};
+
+export type Dispatch<A> = (action: A) => void;
+export type Effect<A, Api> = (dispatch: Dispatch<A>, api: Api) => void;
+export type EffectCreator<P, A, Api> = (p: P) => Effect<A, Api>;
+
+export const noEffect = (dispatch: any, api: any) => {};
+
+export function useEffectfulReducer2<S, A, Api>(
+  reducer: EffectfulReducer<S, A, Api>,
+  initialState: S,
+  initialEffect: Effect<A, Api>,
+  api: Api
+): [S, Dispatch<A>] {
+  const [ie] = useState(() => initialEffect);
+  const apiRef = useRef(api);
+  useEffect(() => {
+    apiRef.current = api;
+  }, [api]);
+  const [ss] = useState(() =>
+    createStore(reducer as any, initialState, effectsEnhancer<Api>(apiRef))
+  );
+  const s = useRef(ss);
+  const [state, setState] = useState(s.current.getState());
+  useEffect(() => {
+    s.current.subscribe(() => {
+      setState(s.current.getState());
+    });
+  }, []);
+  useEffect(() => {
+    ie(s.current.dispatch as any, api);
+  }, [api, ie]);
+  return [state, s.current.dispatch as Dispatch<A>];
+}
+
+export function combineReducers<S, A>(m: {}): any {
+  const r: Reducer<S, A> = (s, a, gs?: S) => {
+    let cs = s === undefined ? {} : s;
+    let cgs = gs === undefined ? {} : gs;
+    let next = {};
+    const allEffects: Effect<A, {}>[] = [];
+    let changed = false;
+    Object.keys(m).forEach((k) => {
+      const mr = m[k];
+      const nk = mr(cs[k], a, cgs);
+      const [nextState, effects] = getEffects(nk);
+      Array.prototype.push.apply(allEffects, effects);
+      if (nextState !== cs[k]) {
+        changed = true;
+      }
+      next[k] = nextState;
+    });
+    if (!changed) {
+      next = cs;
+    }
+    if (allEffects.length) {
+      return withEffects(next, allEffects) as S;
+    }
+    return next as S;
+  };
+  return r;
+}
