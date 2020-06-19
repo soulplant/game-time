@@ -65,7 +65,7 @@ const reducer = (state: State, action: Action): State => {
 
 function isNever(_: never) {}
 
-export const EventsPage: React.FC = (props) => {
+export const EventsPage: React.FC<{ groupId: string }> = (props) => {
   const backend = useBackend();
   const create = async (event: m.Event) => {
     try {

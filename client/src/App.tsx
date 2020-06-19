@@ -1,5 +1,6 @@
 import * as fb from "firebase";
 import React, { useEffect, useMemo, useReducer } from "react";
+import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
 import "./App.css";
 import { app, authProvider, Backend, BackendContext } from "./backend";
 import { EventsPage } from "./EventsPage";
@@ -109,7 +110,16 @@ function App() {
             </p>
             <button onClick={logoutClicked}>Logout</button>
           </div>
-          <EventsPage />
+          <BrowserRouter>
+            <Switch>
+              <Route exact path="/ac-gaming/events">
+                <EventsPage groupId="ac-gaming" />
+              </Route>
+              <Route>
+                <Redirect to="/ac-gaming/events"></Redirect>
+              </Route>
+            </Switch>
+          </BrowserRouter>
         </div>
       </BackendContext.Provider>
     );
