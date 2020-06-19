@@ -1,9 +1,16 @@
 import * as fb from "firebase";
 import React, { useEffect, useMemo, useReducer } from "react";
-import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
+import {
+  BrowserRouter,
+  Link,
+  Redirect,
+  Route,
+  RouteComponentProps,
+  Switch,
+} from "react-router-dom";
 import "./App.css";
 import { app, authProvider, Backend, BackendContext } from "./backend";
-import { EventsPage } from "./EventsPage";
+import { Group } from "./Group";
 
 if (window.location.hostname === "localhost") {
   fb.firestore().settings({
@@ -87,7 +94,7 @@ function App() {
     handleAuthStateChange(null);
   };
   if (state.type === "unknown-login-state") {
-    return <div></div>;
+    return <div>Unknown</div>;
   }
   if (state.type === "logged-out") {
     return <button onClick={loginClicked}>Login</button>;
@@ -111,10 +118,26 @@ function App() {
             <button onClick={logoutClicked}>Logout</button>
           </div>
           <BrowserRouter>
+            <ul>
+              <li>
+                <Link to="/">Home</Link>
+              </li>
+              <li>
+                <Link to="/ac-gaming/events">AC Gaming</Link>
+              </li>
+              <li>
+                <Link to="/stuff/events">Stuff</Link>
+              </li>
+            </ul>
             <Switch>
-              <Route exact path="/ac-gaming/events">
-                <EventsPage groupId="ac-gaming" />
-              </Route>
+              <Route path="/settings">Settings</Route>
+              <Route path="/admin">Admin</Route>
+              <Route
+                path="/:groupId"
+                render={(props: RouteComponentProps<{ groupId: string }>) => (
+                  <Group groupId={props.match.params.groupId}></Group>
+                )}
+              />
               <Route>
                 <Redirect to="/ac-gaming/events"></Redirect>
               </Route>

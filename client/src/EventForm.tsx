@@ -34,6 +34,10 @@ export const EventForm: React.FC<{
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const reset = () => {
+    setTitle("");
+  };
+
   const handleSubmit = async () => {
     try {
       setSaving(true);
@@ -41,9 +45,11 @@ export const EventForm: React.FC<{
       if (!props.create) {
         data.id = id;
       }
-      const resp = await props.onSave(data);
-      if (resp) {
-        setError(resp);
+      const error = await props.onSave(data);
+      if (error) {
+        setError(error);
+      } else if (props.create) {
+        reset();
       }
     } catch (e) {
       setError(e + "");

@@ -1,17 +1,25 @@
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { useBackend } from "./backend";
 import * as m from "./model";
 
-type State =
+export type State =
   | { type: "loaded"; users: m.User[] }
   | { type: "error"; message: string }
+  | { type: "not-found" }
   | { type: "loading" };
 
 const loadingState: State = { type: "loading" };
+const notFoundState: State = { type: "not-found" };
 
 type Action =
   | {
       type: "reloading";
+    }
+  | {
+      type: "create";
+    }
+  | {
+      type: "not-found";
     }
   | {
       type: "loaded";
@@ -35,6 +43,12 @@ const reducer = (state: State, action: Action): State => {
     case "reloading": {
       return loadingState;
     }
+    case "not-found": {
+      return notFoundState;
+    }
+    case "create": {
+      return loadingState;
+    }
     default: {
       isNever(action);
       return state;
@@ -42,21 +56,44 @@ const reducer = (state: State, action: Action): State => {
   }
 };
 
-export const useGroup = (groupId: string) => {
+export const useGroup = (groupId: string): [State, React.Dispatch<Action>] => {
   const backend = useBackend();
   const [state, dispatch] = useReducer(reducer, loadingState);
 
-  useEffect(() => {
-    const loadGroup = async () => {
-      try {
-        const users = await backend.getGroupMembers(groupId);
-        dispatch({ type: "loaded", users });
-      } catch (e) {
-        dispatch({ type: "load-failed", message: e + "" });
+  const loadGroup = useCallback(async () => {
+    try {
+      const exists = await backend.getGroupExists(groupId);
+      if (!exists) {
+        dispatch({ type: "not-found" });
+        return;
       }
-    };
-    loadGroup();
+      const users = await backend.getGroupMembers(groupId);
+      dispatch({ type: "loaded", users });
+    } catch (e) {
+      dispatch({ type: "load-failed", message: e + "" });
+    }
   }, [backend, groupId]);
 
-  return state;
+  useEffect(() => {
+    loadGroup();
+  }, [loadGroup]);
+
+  const dispatch2: typeof dispatch = useCallback(
+    async (action) => {
+      switch (action.type) {
+        case "create": {
+          dispatch(action);
+          await backend.createGroup(groupId);
+          await loadGroup();
+          break;
+        }
+        default: {
+          dispatch(action);
+        }
+      }
+    },
+    [backend, groupId, loadGroup]
+  );
+
+  return [state, dispatch2];
 };

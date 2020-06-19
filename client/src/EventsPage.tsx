@@ -69,7 +69,7 @@ export const EventsPage: React.FC<{ groupId: string }> = (props) => {
   const backend = useBackend();
   const create = async (event: m.Event) => {
     try {
-      await backend.addEvent(event);
+      await backend.addEvent(props.groupId, event);
       await loadEvents();
       return null;
     } catch (e) {
@@ -78,7 +78,7 @@ export const EventsPage: React.FC<{ groupId: string }> = (props) => {
   };
   const save = async (event: m.Event) => {
     try {
-      await backend.saveEvent(event);
+      await backend.saveEvent(props.groupId, event);
       await loadEvents();
       return null;
     } catch (e) {
@@ -88,13 +88,15 @@ export const EventsPage: React.FC<{ groupId: string }> = (props) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const handleDelete = async (eventId: string) => {
-    await backend.deleteEvent(eventId);
+    await backend.deleteEvent(props.groupId, eventId);
     await loadEvents();
   };
+
   const loadEvents = useCallback(async () => {
-    const events = await backend.getEvents();
+    const events = await backend.getEvents(props.groupId);
     dispatch({ type: "events-loaded", events });
-  }, [backend]);
+  }, [backend, props.groupId]);
+
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);

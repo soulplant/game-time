@@ -35,43 +35,47 @@ export const useBackend = () => {
 export class Backend {
   constructor(private fs: firestore.Firestore, private user: fb.User) {}
 
-  private events() {
-    return this.fs.collection(kGroups).doc("ac-gaming").collection(kEvents);
+  private events(groupId: string) {
+    return this.fs.collection(kGroups).doc(groupId).collection(kEvents);
   }
 
   private group(groupId: string) {
     return this.fs.collection(kGroups).doc(groupId);
   }
 
-  async addEvent(event: m.Event): Promise<void> {
-    await this.events().add(event);
+  async getGroupExists(groupId: string): Promise<boolean> {
+    const group = await this.group(groupId).get();
+    return group.exists;
   }
 
-  async saveEvent(event: m.Event): Promise<void> {
-    await this.events().doc(event.id).update({ title: event.title });
+  async addEvent(groupId: string, event: m.Event): Promise<void> {
+    await this.events(groupId).add(event);
   }
 
-  async registerAttendance(eventId: string): Promise<void> {
-    this.events()
+  async saveEvent(groupId: string, event: m.Event): Promise<void> {
+    await this.events(groupId).doc(event.id).update({ title: event.title });
+  }
+
+  async registerAttendance(groupId: string, eventId: string): Promise<void> {
+    await this.events(groupId)
       .doc(eventId)
-      .collection("attendees")
-      .add({ userId: this.user.uid }); // maybe?
-    // TODO
+      .collection(kAttendees)
+      .doc(this.user.uid)
+      .set({});
   }
 
-  async unregisterAttendance(eventId: string): Promise<void> {
-    this.events()
+  async unregisterAttendance(groupId: string, eventId: string): Promise<void> {
+    await this.events(groupId)
       .doc(eventId)
-      .collection("attendees")
-      .where("userId", "==", this.user.uid)
-      .get();
-    // TODO
+      .collection(kAttendees)
+      .doc(this.user.uid)
+      .delete();
   }
 
-  async getEvents(): Promise<m.Event[]> {
+  async getEvents(groupId: string): Promise<m.Event[]> {
     const eventCol = this.fs
       .collection(kGroups)
-      .doc("ac-gaming")
+      .doc(groupId)
       .collection(kEvents);
     const resp = await eventCol.get();
     return resp.docs
@@ -80,8 +84,8 @@ export class Backend {
       .filter((e) => e) as m.Event[];
   }
 
-  async deleteEvent(eventId: string): Promise<void> {
-    await this.events().doc(eventId).delete();
+  async deleteEvent(groupId: string, eventId: string): Promise<void> {
+    await this.events(groupId).doc(eventId).delete();
   }
 
   async getGroupMembers(groupId: string): Promise<m.User[]> {
@@ -93,12 +97,15 @@ export class Backend {
     if (!this.user.displayName) {
       throw Error("current user doesn't have displayName set");
     }
+    await this.group(groupId).set({
+      creator: this.user.uid,
+    });
     await this.fs
       .collection(kGroups)
       .doc(groupId)
       .collection(kMembers)
       .doc(this.user.uid)
-      .set({ displayName: this.user.displayName, admin: true, creator: true });
+      .set({ displayName: this.user.displayName, admin: true });
   }
 
   async requestGroupAccess(groupId: string): Promise<void> {
