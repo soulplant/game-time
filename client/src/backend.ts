@@ -18,6 +18,12 @@ export const authProvider = new fb.auth.GoogleAuthProvider();
 
 export const BackendContext = React.createContext<Backend | null>(null);
 
+const kGroups = "groups";
+const kMembers = "members";
+const kEvents = "events";
+const kAttendees = "attendees";
+const kMembershipRequests = "membership-requests";
+
 export const useBackend = () => {
   const backend = useContext(BackendContext);
   if (!backend) {
@@ -30,7 +36,11 @@ export class Backend {
   constructor(private fs: firestore.Firestore, private user: fb.User) {}
 
   private events() {
-    return this.fs.collection("groups").doc("ac-gaming").collection("events");
+    return this.fs.collection(kGroups).doc("ac-gaming").collection(kEvents);
+  }
+
+  private group(groupId: string) {
+    return this.fs.collection(kGroups).doc(groupId);
   }
 
   async addEvent(event: m.Event): Promise<void> {
@@ -60,9 +70,9 @@ export class Backend {
 
   async getEvents(): Promise<m.Event[]> {
     const eventCol = this.fs
-      .collection("groups")
+      .collection(kGroups)
       .doc("ac-gaming")
-      .collection("events");
+      .collection(kEvents);
     const resp = await eventCol.get();
     return resp.docs
       .map((doc) => ({ ...doc.data(), id: doc.id }))
@@ -72,5 +82,39 @@ export class Backend {
 
   async deleteEvent(eventId: string): Promise<void> {
     await this.events().doc(eventId).delete();
+  }
+
+  async getGroupMembers(groupId: string): Promise<m.User[]> {
+    const members = await this.group(groupId).collection(kMembers).get();
+    return members.docs.map(m.parseUser);
+  }
+
+  async createGroup(groupId: string): Promise<void> {
+    if (!this.user.displayName) {
+      throw Error("current user doesn't have displayName set");
+    }
+    await this.fs
+      .collection(kGroups)
+      .doc(groupId)
+      .collection(kMembers)
+      .doc(this.user.uid)
+      .set({ displayName: this.user.displayName, admin: true, creator: true });
+  }
+
+  async requestGroupAccess(groupId: string): Promise<void> {
+    await this.group(groupId)
+      .collection(kMembershipRequests)
+      .doc(this.user.uid)
+      .set({
+        displayName: this.user.displayName,
+        email: this.user.email,
+      });
+  }
+
+  async getAccessRequests(groupId: string): Promise<m.MembershipRequest[]> {
+    const reqs = await this.group(groupId)
+      .collection(kMembershipRequests)
+      .get();
+    return reqs.docs.map(m.parseMembershipRequest);
   }
 }
