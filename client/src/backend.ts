@@ -20,9 +20,12 @@ export const BackendContext = React.createContext<Backend | null>(null);
 
 const kGroups = "groups";
 const kMembers = "members";
+const kMembershipRequests = "membershipRequests";
+
 const kEvents = "events";
 const kAttendees = "attendees";
-const kMembershipRequests = "membership-requests";
+
+const kUsers = "users";
 
 export const useBackend = () => {
   const backend = useContext(BackendContext);
@@ -30,6 +33,10 @@ export const useBackend = () => {
     throw Error("no backend");
   }
   return backend;
+};
+
+export const useBackendMaybe = () => {
+  return useContext(BackendContext);
 };
 
 export class Backend {
@@ -41,6 +48,10 @@ export class Backend {
 
   private group(groupId: string) {
     return this.fs.collection(kGroups).doc(groupId);
+  }
+
+  private me() {
+    return this.fs.collection(kUsers).doc(this.user.uid);
   }
 
   async getGroupExists(groupId: string): Promise<boolean> {
@@ -88,9 +99,9 @@ export class Backend {
     await this.events(groupId).doc(eventId).delete();
   }
 
-  async getGroupMembers(groupId: string): Promise<m.User[]> {
+  async getGroupMembers(groupId: string): Promise<m.GroupMember[]> {
     const members = await this.group(groupId).collection(kMembers).get();
-    return members.docs.map(m.parseUser);
+    return members.docs.map(m.parseGroupMember);
   }
 
   async createGroup(groupId: string): Promise<void> {
@@ -123,5 +134,25 @@ export class Backend {
       .collection(kMembershipRequests)
       .get();
     return reqs.docs.map(m.parseMembershipRequest);
+  }
+
+  async getMe(): Promise<m.User> {
+    const meDoc = await this.me().get();
+    if (!meDoc.exists) {
+      await this.me().set({ starredGroupIds: [] });
+    }
+    return m.parseUser(meDoc);
+  }
+
+  async starGroup(groupId: string) {
+    await this.me().update({
+      starredGroupIds: firestore.FieldValue.arrayUnion(groupId),
+    });
+  }
+
+  async unstarGroup(groupId: string) {
+    await this.me().update({
+      starredGroupIds: firestore.FieldValue.arrayRemove(groupId),
+    });
   }
 }

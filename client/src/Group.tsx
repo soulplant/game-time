@@ -1,10 +1,29 @@
 import React from "react";
 import { Redirect, Route, Switch } from "react-router-dom";
 import { EventsPage } from "./EventsPage";
+import * as m from "./model";
 import { useGroup } from "./useGroup";
+import * as me from "./useMe";
 
-export const Group: React.FC<{ groupId: string }> = (props) => {
+export const Group: React.FC<{
+  groupId: string;
+  user: m.User;
+  userDispatch: me.Dispatch;
+}> = (props) => {
   const [group, dispatch] = useGroup(props.groupId);
+
+  const starGroup = async () => {
+    await props.userDispatch({ type: "star-group", groupId: props.groupId });
+  };
+  const unstarGroup = async () => {
+    await props.userDispatch({ type: "unstar-group", groupId: props.groupId });
+  };
+  const createGroup = async () => {
+    await dispatch({ type: "create" });
+    await starGroup();
+  };
+
+  const starred = props.user.starredGroupIds.includes(props.groupId);
   switch (group.type) {
     case "error": {
       return <div>Failed to load group: {group.message}</div>;
@@ -16,7 +35,7 @@ export const Group: React.FC<{ groupId: string }> = (props) => {
       return (
         <div>
           Group {props.groupId} doesn't exist.{" "}
-          <button onClick={() => dispatch({ type: "create" })}>Create?</button>
+          <button onClick={createGroup}>Create?</button>
         </div>
       );
     }
@@ -24,10 +43,16 @@ export const Group: React.FC<{ groupId: string }> = (props) => {
       return (
         <div>
           <h1>Group {props.groupId}</h1>
+          {starred ? (
+            <button onClick={unstarGroup}>Unstar</button>
+          ) : (
+            <button onClick={starGroup}>Star</button>
+          )}
+
           <h3>Members</h3>
           <ul>
             {group.users.map((u) => (
-              <li>{u.displayName}</li>
+              <li key={u.id}>{u.displayName}</li>
             ))}
           </ul>
           <Switch>

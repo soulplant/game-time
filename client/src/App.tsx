@@ -11,6 +11,9 @@ import {
 import "./App.css";
 import { app, authProvider, Backend, BackendContext } from "./backend";
 import { Group } from "./Group";
+import { GroupList } from "./GroupList";
+import { GroupPicker } from "./GroupPicker";
+import { useMe } from "./useMe";
 
 if (window.location.hostname === "localhost") {
   fb.firestore().settings({
@@ -85,6 +88,8 @@ function App() {
     return new Backend(fb.firestore(), user);
   }, [user]);
 
+  const [me, meDispatch] = useMe(backend);
+
   const loginClicked = async () => {
     const resp = await fb.auth().signInWithPopup(authProvider);
     handleAuthStateChange(resp.user);
@@ -100,6 +105,14 @@ function App() {
     return <button onClick={loginClicked}>Login</button>;
   }
   if (state.type === "logged-in") {
+    switch (me.type) {
+      case "error": {
+        return <div>Failed to load user</div>;
+      }
+      case "loading": {
+        return <div>Loading...</div>;
+      }
+    }
     return (
       <BackendContext.Provider value={backend}>
         <div>
@@ -122,22 +135,32 @@ function App() {
               <li>
                 <Link to="/">Home</Link>
               </li>
-              <li>
-                <Link to="/ac-gaming/events">AC Gaming</Link>
-              </li>
-              <li>
-                <Link to="/stuff/events">Stuff</Link>
-              </li>
             </ul>
+            <GroupList me={me.me} />
             <Switch>
               <Route path="/settings">Settings</Route>
               <Route path="/admin">Admin</Route>
               <Route
                 path="/:groupId"
                 render={(props: RouteComponentProps<{ groupId: string }>) => (
-                  <Group groupId={props.match.params.groupId}></Group>
+                  <Group
+                    groupId={props.match.params.groupId}
+                    user={me.me}
+                    userDispatch={meDispatch}
+                  ></Group>
                 )}
               />
+              <Route
+                exact
+                path="/"
+                render={(props) => (
+                  <GroupPicker
+                    onSelectGroup={(groupId) =>
+                      props.history.push(`/${groupId}/events`)
+                    }
+                  ></GroupPicker>
+                )}
+              ></Route>
               <Route>
                 <Redirect to="/ac-gaming/events"></Redirect>
               </Route>

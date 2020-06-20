@@ -3,7 +3,7 @@ import { useBackend } from "./backend";
 import * as m from "./model";
 
 export type State =
-  | { type: "loaded"; users: m.User[] }
+  | { type: "loaded"; users: m.GroupMember[] }
   | { type: "error"; message: string }
   | { type: "not-found" }
   | { type: "loading" };
@@ -23,7 +23,7 @@ type Action =
     }
   | {
       type: "loaded";
-      users: m.User[];
+      users: m.GroupMember[];
     }
   | {
       type: "load-failed";
@@ -56,7 +56,7 @@ const reducer = (state: State, action: Action): State => {
   }
 };
 
-export const useGroup = (groupId: string): [State, React.Dispatch<Action>] => {
+export const useGroup = (groupId: string) => {
   const backend = useBackend();
   const [state, dispatch] = useReducer(reducer, loadingState);
 
@@ -78,8 +78,8 @@ export const useGroup = (groupId: string): [State, React.Dispatch<Action>] => {
     loadGroup();
   }, [loadGroup]);
 
-  const dispatch2: typeof dispatch = useCallback(
-    async (action) => {
+  const dispatch2 = useCallback(
+    async (action: Action) => {
       switch (action.type) {
         case "create": {
           dispatch(action);
@@ -95,5 +95,5 @@ export const useGroup = (groupId: string): [State, React.Dispatch<Action>] => {
     [backend, groupId, loadGroup]
   );
 
-  return [state, dispatch2];
+  return [state, dispatch2] as const;
 };

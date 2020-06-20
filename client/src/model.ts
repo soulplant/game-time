@@ -1,11 +1,30 @@
 import * as fb from "firebase";
 
 export type User = {
+  starredGroupIds: string[];
+};
+
+export function parseUser(doc: fb.firestore.DocumentSnapshot): User {
+  const data = doc.data();
+  if (!data) {
+    return { starredGroupIds: [] };
+  }
+  if (!data.starredGroupIds) {
+    return { starredGroupIds: [] };
+  }
+  return {
+    starredGroupIds: data.starredGroupIds,
+  };
+}
+
+export type GroupMember = {
   id?: string;
   displayName: string;
 };
 
-export function parseUser(doc: fb.firestore.DocumentSnapshot): User {
+export function parseGroupMember(
+  doc: fb.firestore.DocumentSnapshot
+): GroupMember {
   const data = doc.data();
   if (!data) {
     throw Error("no data");
@@ -14,6 +33,7 @@ export function parseUser(doc: fb.firestore.DocumentSnapshot): User {
     throw Error("user displayName field missing");
   }
   return {
+    id: doc.id,
     displayName: data.displayName,
   };
 }
