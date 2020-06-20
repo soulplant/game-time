@@ -99,7 +99,7 @@ function App() {
     handleAuthStateChange(null);
   };
   if (state.type === "unknown-login-state") {
-    return <div>Unknown</div>;
+    return <div />;
   }
   if (state.type === "logged-out") {
     return <button onClick={loginClicked}>Login</button>;
@@ -110,7 +110,7 @@ function App() {
         return <div>Failed to load user</div>;
       }
       case "loading": {
-        return <div>Loading...</div>;
+        return <div />;
       }
     }
     return (

@@ -112,7 +112,7 @@ export const EventsPage: React.FC<{ groupId: string }> = (props) => {
           <ul>
             {state.events.map((e) => (
               <li key={e.id}>
-                {e.id} / {e.title} /{" "}
+                {e.title}{" "}
                 <button
                   onClick={() =>
                     dispatch({ type: "show-event", eventId: e.id! })
