@@ -7,12 +7,10 @@ App for scheduling video game sessions.
 To setup and run the firebase emulator
 
 ```bash
-curl -sL firebase.tools | bash  # Install firebase CLI
+curl -sL firebase.tools | bash   # Install firebase CLI
+tools/reset-db.sh                # Optional: delete all data in the DB.
 firebase emulators:start
 ```
-
-Note you'll have to update the firestore.rules to allow all reads/writes by
-changing false to true in order to use the client.
 
 To run the server
 
